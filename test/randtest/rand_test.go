@@ -1,6 +1,7 @@
 package randtest
 
 import (
+	"fmt"
 	word "github.com/golfz/learn-golang/test/word2"
 	"math/rand"
 	"testing"
@@ -14,6 +15,7 @@ func TestRandomPalindromes(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		p := RandomPalindrome(rng)
+		fmt.Println(p)
 		if !word.IsPalindrome(p) {
 			t.Errorf("IsPanlindrome(%q) = false", p)
 		}
