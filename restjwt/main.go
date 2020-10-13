@@ -3,12 +3,12 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	"log"
 	"net/http"
-	"database/sql"
-	"github.com/lib/pq"
 	"os"
 )
 
