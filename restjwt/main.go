@@ -18,3 +18,19 @@ func main() {
 	log.Println("Listen on port 8000...")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
+
+func signup(w http.ResponseWriter, r *http.Request) {
+	log.Println("signup invoked")
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	log.Println("login invoked")
+}
+
+func ProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
+	log.Println("ProtectedEndpoint invoked")
+}
+
+func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
+	return nil
+}
