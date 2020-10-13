@@ -6,7 +6,10 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"database/sql"
 )
+
+var db *sql.DB
 
 type User struct {
 	ID       int    `json:"id"`
