@@ -3,10 +3,13 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"database/sql"
+	"github.com/lib/pq"
+	"os"
 )
 
 var db *sql.DB
@@ -26,6 +29,25 @@ type Error struct {
 }
 
 func main() {
+	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(db)
+
+	db, err = sql.Open("postgres", pgUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(db)
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	router := mux.NewRouter()
 
 	router.HandleFunc("/signup", signup).Methods("POST")
