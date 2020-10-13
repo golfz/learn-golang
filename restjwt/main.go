@@ -21,6 +21,7 @@ func main() {
 
 func signup(w http.ResponseWriter, r *http.Request) {
 	log.Println("signup invoked")
+	w.Write([]byte("hello this is Signup"))
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -32,5 +33,6 @@ func ProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
+	log.Println("TokenVerifyMiddleWare invoked")
 	return nil
 }
