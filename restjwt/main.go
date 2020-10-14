@@ -60,8 +60,14 @@ func main() {
 }
 
 func responseError(w http.ResponseWriter, status int, err Error) {
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(err)
+}
+
+func responseSuccessNoBody(w http.ResponseWriter, status int) {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(status)
 }
 
 func signup(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +91,8 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		error.Message = "Password is empty"
 		responseError(w, http.StatusBadRequest, error)
 	}
+
+	responseSuccessNoBody(w, http.StatusCreated)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
