@@ -4,6 +4,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
@@ -58,9 +59,32 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
+func responseError(w http.ResponseWriter, status int, err Error) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(err)
+}
+
 func signup(w http.ResponseWriter, r *http.Request) {
 	log.Println("signup invoked")
-	w.Write([]byte("hello this is Signup"))
+
+	var user User
+	var error Error
+
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if user.Email == "" {
+		error.Message = "Email is empty"
+		responseError(w, http.StatusBadRequest, error)
+		return
+	}
+
+	if user.Password == "" {
+		error.Message = "Password is empty"
+		responseError(w, http.StatusBadRequest, error)
+	}
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
