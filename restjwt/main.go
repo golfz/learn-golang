@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var db *sql.DB
@@ -70,6 +71,12 @@ func responseSuccessNoBody(w http.ResponseWriter, status int) {
 	w.WriteHeader(status)
 }
 
+func responseSuccessWithBody(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
 func signup(w http.ResponseWriter, r *http.Request) {
 	log.Println("signup invoked")
 
@@ -93,7 +100,32 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseSuccessNoBody(w, http.StatusCreated)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Password:", user.Password)
+	fmt.Println("Hashed:", hashed)
+
+	user.Password = string(hashed)
+
+	fmt.Println("Password after hashed:", user.Password)
+
+
+	stmt := "insert into users(email, password) values($1, $2) RETURNING id;"
+
+	err = db.QueryRow(stmt, user.Email, user.Password).Scan(&user.ID)
+	if err != nil {
+		error.Message = "Create user error"
+		responseError(w, http.StatusInternalServerError, error)
+		return
+	}
+
+	user.Password = ""
+
+	responseSuccessWithBody(w, http.StatusOK, user)
+
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
