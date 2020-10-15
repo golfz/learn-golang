@@ -84,6 +84,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	if user.Password == "" {
 		error.Message = "Password is empty"
 		responseError(w, http.StatusBadRequest, error)
+		return
 	}
 }
 
