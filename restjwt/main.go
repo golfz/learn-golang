@@ -6,12 +6,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"os"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var db *sql.DB
@@ -112,7 +114,6 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Password after hashed:", user.Password)
 
-
 	stmt := "insert into users(email, password) values($1, $2) RETURNING id;"
 
 	err = db.QueryRow(stmt, user.Email, user.Password).Scan(&user.ID)
@@ -128,8 +129,72 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func GenerateToken(user User) (string, error) {
+	var err error
+	secret := "secret"
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": user.Email,
+		"iss":   "course",
+	})
+
+	spew.Dump(token)
+
+	tokenString, err := token.SignedString([]byte(secret))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return tokenString, nil
+}
+
 func login(w http.ResponseWriter, r *http.Request) {
 	log.Println("login invoked")
+
+	var user User
+	var error Error
+	//var jwt JWT
+
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if user.Email == "" {
+		error.Message = "Email is empty"
+		responseError(w, http.StatusBadRequest, error)
+		return
+	}
+
+	if user.Password == "" {
+		error.Message = "Password is empty"
+		responseError(w, http.StatusBadRequest, error)
+		return
+	}
+
+	//hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//password := string(hashed)
+
+	//log.Println("password:" , password)
+
+	stmt := "select * from users where email=$1"
+	row := db.QueryRow(stmt, user.Email)
+
+	err = row.Scan(&user.ID, &user.Email, &user.Password)
+	if err != nil {
+		log.Println("error", err)
+	}
+
+	spew.Dump(user)
+
+	token, err := GenerateToken(user)
+
+	log.Println(token)
+
+	responseSuccessNoBody(w, http.StatusOK)
 }
 
 func ProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
