@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var db *sql.DB
@@ -153,7 +154,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	var user User
 	var error Error
-	//var jwt JWT
+	var jwt JWT
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -172,13 +173,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//password := string(hashed)
+	password := user.Password
 
-	//log.Println("password:" , password)
+	log.Println("password:", password)
 
 	stmt := "select * from users where email=$1"
 	row := db.QueryRow(stmt, user.Email)
@@ -190,18 +187,68 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	spew.Dump(user)
 
+	hashedPassword := user.Password
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err != nil {
+		error.Message = "password is not corrected"
+		responseError(w, http.StatusUnauthorized, error)
+		return
+	}
+
 	token, err := GenerateToken(user)
+	if err != nil {
+		error.Message = "cannot create a token"
+		responseError(w, http.StatusInternalServerError, error)
+		return
+	}
 
 	log.Println(token)
 
-	responseSuccessNoBody(w, http.StatusOK)
+	jwt.Token = token
+
+	responseSuccessWithBody(w, http.StatusOK, jwt)
 }
 
 func ProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 	log.Println("ProtectedEndpoint invoked")
+	responseSuccessWithBody(w, http.StatusOK, "this is protected data")
 }
 
 func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 	log.Println("TokenVerifyMiddleWare invoked")
-	return nil
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var errorObj Error
+
+		authHeader := r.Header.Get("Authorization")
+
+		log.Println(authHeader)
+
+		bearerToken := strings.Split(authHeader, " ")
+		if len(bearerToken) != 2 {
+			errorObj.Message = "Wrong token"
+			responseError(w, http.StatusForbidden, errorObj)
+			return
+		}
+
+		authToken := bearerToken[1]
+		log.Println(authToken)
+
+		token, error := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("There was an error")
+			}
+
+			return []byte("secret"), nil
+		})
+		if error != nil {
+			errorObj.Message = error.Error()
+			responseError(w, http.StatusUnauthorized, errorObj)
+			return
+		}
+
+		spew.Dump(token)
+
+	})
 }
