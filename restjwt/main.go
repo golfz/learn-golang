@@ -250,5 +250,13 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 
 		spew.Dump(token)
 
+		if token.Valid {
+			next.ServeHTTP(w, r)
+		} else {
+			errorObj.Message = "token is invalid"
+			responseError(w, http.StatusUnauthorized, errorObj)
+			return
+		}
+
 	})
 }
