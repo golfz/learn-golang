@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/subosito/gotenv"
 )
 
 var db *sql.DB
@@ -33,7 +34,13 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+func init() {
+	gotenv.Load()
+	log.Println("init()")
+}
+
 func main() {
+	log.Println("db connection:", os.Getenv("ELEPHANTSQL_URL"))
 	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
 	if err != nil {
 		log.Fatal(err)
@@ -132,7 +139,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 func GenerateToken(user User) (string, error) {
 	var err error
-	secret := "secret"
+	secret := os.Getenv("SECRET")
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
@@ -240,7 +247,7 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 				return nil, fmt.Errorf("There was an error")
 			}
 
-			return []byte("secret"), nil
+			return []byte(os.Getenv("SECRET")), nil
 		})
 		if error != nil {
 			errorObj.Message = error.Error()
