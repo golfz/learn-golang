@@ -8,31 +8,18 @@ import (
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golfz/learn-golang/restjwt/driver"
+	"github.com/golfz/learn-golang/restjwt/models"
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
+	"github.com/subosito/gotenv"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"github.com/subosito/gotenv"
 )
 
 var db *sql.DB
-
-type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type JWT struct {
-	Token string `json:"token"`
-}
-
-type Error struct {
-	Message string `json:"message"`
-}
 
 func init() {
 	gotenv.Load()
@@ -40,25 +27,7 @@ func init() {
 }
 
 func main() {
-	log.Println("db connection:", os.Getenv("ELEPHANTSQL_URL"))
-	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(db)
-
-	db, err = sql.Open("postgres", pgUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(db)
-
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+	db = driver.ConnectDB()
 
 	router := mux.NewRouter()
 
@@ -70,7 +39,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
-func responseError(w http.ResponseWriter, status int, err Error) {
+func responseError(w http.ResponseWriter, status int, err models.Error) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(err)
@@ -90,8 +59,8 @@ func responseSuccessWithBody(w http.ResponseWriter, status int, data interface{}
 func signup(w http.ResponseWriter, r *http.Request) {
 	log.Println("signup invoked")
 
-	var user User
-	var error Error
+	var user models.User
+	var error models.Error
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -137,7 +106,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GenerateToken(user User) (string, error) {
+func GenerateToken(user models.User) (string, error) {
 	var err error
 	secret := os.Getenv("SECRET")
 
@@ -159,9 +128,9 @@ func GenerateToken(user User) (string, error) {
 func login(w http.ResponseWriter, r *http.Request) {
 	log.Println("login invoked")
 
-	var user User
-	var error Error
-	var jwt JWT
+	var user models.User
+	var error models.Error
+	var jwt models.JWT
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -226,7 +195,7 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 	log.Println("TokenVerifyMiddleWare invoked")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var errorObj Error
+		var errorObj models.Error
 
 		authHeader := r.Header.Get("Authorization")
 
