@@ -10,6 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golfz/learn-golang/restjwt/driver"
 	"github.com/golfz/learn-golang/restjwt/models"
+	"github.com/golfz/learn-golang/restjwt/utils"
 	"github.com/gorilla/mux"
 	"github.com/subosito/gotenv"
 	"golang.org/x/crypto/bcrypt"
@@ -39,23 +40,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
-func responseError(w http.ResponseWriter, status int, err models.Error) {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(err)
-}
-
-func responseSuccessNoBody(w http.ResponseWriter, status int) {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
-}
-
-func responseSuccessWithBody(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
 func signup(w http.ResponseWriter, r *http.Request) {
 	log.Println("signup invoked")
 
@@ -69,13 +53,13 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	if user.Email == "" {
 		error.Message = "Email is empty"
-		responseError(w, http.StatusBadRequest, error)
+		utils.ResponseError(w, http.StatusBadRequest, error)
 		return
 	}
 
 	if user.Password == "" {
 		error.Message = "Password is empty"
-		responseError(w, http.StatusBadRequest, error)
+		utils.ResponseError(w, http.StatusBadRequest, error)
 		return
 	}
 
@@ -96,13 +80,13 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow(stmt, user.Email, user.Password).Scan(&user.ID)
 	if err != nil {
 		error.Message = "Create user error"
-		responseError(w, http.StatusInternalServerError, error)
+		utils.ResponseError(w, http.StatusInternalServerError, error)
 		return
 	}
 
 	user.Password = ""
 
-	responseSuccessWithBody(w, http.StatusOK, user)
+	utils.ResponseSuccessWithBody(w, http.StatusOK, user)
 
 }
 
@@ -139,13 +123,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	if user.Email == "" {
 		error.Message = "Email is empty"
-		responseError(w, http.StatusBadRequest, error)
+		utils.ResponseError(w, http.StatusBadRequest, error)
 		return
 	}
 
 	if user.Password == "" {
 		error.Message = "Password is empty"
-		responseError(w, http.StatusBadRequest, error)
+		utils.ResponseError(w, http.StatusBadRequest, error)
 		return
 	}
 
@@ -168,14 +152,14 @@ func login(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
 		error.Message = "password is not corrected"
-		responseError(w, http.StatusUnauthorized, error)
+		utils.ResponseError(w, http.StatusUnauthorized, error)
 		return
 	}
 
 	token, err := GenerateToken(user)
 	if err != nil {
 		error.Message = "cannot create a token"
-		responseError(w, http.StatusInternalServerError, error)
+		utils.ResponseError(w, http.StatusInternalServerError, error)
 		return
 	}
 
@@ -183,12 +167,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	jwt.Token = token
 
-	responseSuccessWithBody(w, http.StatusOK, jwt)
+	utils.ResponseSuccessWithBody(w, http.StatusOK, jwt)
 }
 
 func ProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 	log.Println("ProtectedEndpoint invoked")
-	responseSuccessWithBody(w, http.StatusOK, "this is protected data")
+	utils.ResponseSuccessWithBody(w, http.StatusOK, "this is protected data")
 }
 
 func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
@@ -204,7 +188,7 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 		bearerToken := strings.Split(authHeader, " ")
 		if len(bearerToken) != 2 {
 			errorObj.Message = "Wrong token"
-			responseError(w, http.StatusForbidden, errorObj)
+			utils.ResponseError(w, http.StatusForbidden, errorObj)
 			return
 		}
 
@@ -220,7 +204,7 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 		})
 		if error != nil {
 			errorObj.Message = error.Error()
-			responseError(w, http.StatusUnauthorized, errorObj)
+			utils.ResponseError(w, http.StatusUnauthorized, errorObj)
 			return
 		}
 
@@ -230,7 +214,7 @@ func TokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 			next.ServeHTTP(w, r)
 		} else {
 			errorObj.Message = "token is invalid"
-			responseError(w, http.StatusUnauthorized, errorObj)
+			utils.ResponseError(w, http.StatusUnauthorized, errorObj)
 			return
 		}
 
